@@ -1,0 +1,92 @@
+from flask import Flask, Response
+from flask_cors import CORS
+import cv2
+import numpy as np
+from tensorflow.keras.models import model_from_json, Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Dropout, Flatten, Dense, InputLayer
+from tensorflow.keras.utils import custom_object_scope
+
+app = Flask(__name__)
+CORS(app)
+
+# Load model
+with open("facialemotionmodel.json", "r") as json_file:
+    model_json = json_file.read()
+
+with custom_object_scope({
+    'Sequential': Sequential,
+    'Conv2D': Conv2D,
+    'MaxPooling2D': MaxPooling2D,
+    'Dropout': Dropout,
+    'Flatten': Flatten,
+    'Dense': Dense,
+    'InputLayer': InputLayer
+}):
+    model = model_from_json(model_json)
+
+model.load_weights("facialemotionmodel.h5")
+
+# Haar Cascade & Emotion Labels
+haar_file = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+face_cascade = cv2.CascadeClassifier(haar_file)
+
+labels = {
+    0: 'angry', 1: 'disgust', 2: 'fear', 3: 'happy',
+    4: 'neutral', 5: 'sad', 6: 'surprise'
+}
+
+advice_dict = {
+    'angry': "Pause, breathe, and let go.",
+    'disgust': "Focus on what calms you.",
+    'fear': "You're stronger than you think.",
+    'happy': "Keep spreading your joy!",
+    'neutral': "Balance is beautiful.",
+    'sad': "It's okay — brighter days ahead.",
+    'surprise': "Stay curious and embrace it.",
+}
+
+def extract_features(image):
+    feature = np.array(image).reshape(1, 48, 48, 1) / 255.0
+    return feature
+
+@app.route("/facial_analysis", methods=["GET"])
+def facial_analysis():
+    def generate_frames():
+        cap = cv2.VideoCapture(0)
+        while cap.isOpened():
+            success, frame = cap.read()
+            if not success:
+                break
+
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+
+            for (x, y, w, h) in faces:
+                roi = gray[y:y+h, x:x+w]
+                roi = cv2.resize(roi, (48, 48))
+                img = extract_features(roi)
+                pred = model.predict(img)
+                emotion_index = int(np.argmax(pred))
+                emotion_label = labels[emotion_index]
+                advice = advice_dict[emotion_label]
+
+                # Draw emotion label above face
+                cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
+                cv2.putText(frame, emotion_label.capitalize(), (x, y - 10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
+
+                # Draw advice below face
+                cv2.putText(frame, advice, (x, y + h + 25),
+                            cv2.FONT_HERSHEY_PLAIN, 1.2, (0, 255, 0), 2)
+
+            _, buffer = cv2.imencode('.jpg', frame)
+            frame_bytes = buffer.tobytes()
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+
+        cap.release()
+
+    return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+if __name__ == "__main__":
+    app.run(port=5000, debug=True)
