@@ -33,7 +33,7 @@ GOALS = {
         "Take 10 minutes of quiet time today",
         " thanks for your kind help for teaching me"
         "Hello Today"
-        "Good afternoon"
+        "Good afternoon" 
         "Listen to your favorite calming music",
         "Reach out to a friend for a quick chat"
     ],
@@ -228,3 +228,5 @@ def update_user_goals(request: UpdateUserGoalsRequest):
 
     user.points += points
     return JSONResponse(status_code=200, content={"message": "Goals updated", "points": user.points})
+
+practice line for stash demo
