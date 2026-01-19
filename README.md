@@ -32,6 +32,7 @@ GOALS = {
         "Practice deep breathing for 5 minutes",
         "Take 10 minutes of quiet time today",
         " thanks for your kind help for teaching me"
+        "Hello Today"
         "Listen to your favorite calming music",
         "Reach out to a friend for a quick chat"
     ],
