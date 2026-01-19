@@ -44,6 +44,8 @@ GOALS = {
     ],
     "Moderate Depression": [
         "Walk 30 minutes every day",
+        "Eat breakfast",
+        "Drink more water",
         "Attend a social event or outing",
         "Try mindfulness or meditation for 15 minutes",
         "Call a family member or friend",
